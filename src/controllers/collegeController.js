@@ -10,15 +10,14 @@ const isValidString = function (data) {
 
 const isValidUrl = function (data) {
   const urlRegex =
-    /(https?:\/\/(?:www\.)?[\w+-_.0-9@\/]+logo.(?:png|jpg|jpeg))/i;
+    /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()!@:%_\+.~#?&\/\/=]*)/;
   return urlRegex.test(data);
 };
 
-const checkNumbersInString= function(data){
-  const checkNumbersInStringRegex =
-    /^[a-zA-Z ]*$/;
+const checkNumbersInString = function (data) {
+  const checkNumbersInStringRegex = /^[a-zA-Z ]*$/;
   return checkNumbersInStringRegex.test(data);
-}
+};
 
 const createCollege = async function (req, res) {
   try {
@@ -29,12 +28,12 @@ const createCollege = async function (req, res) {
     const requiredFields = ["name", "fullName", "logoLink"];
 
     // Checking if the required fields are present or not
-    // for (field of requiredFields) {
-    //   if (!req["body"].hasOwnProperty(field))
-    //     return res
-    //       .status(400)
-    //       .send({ status: false, msg: `Please provide ${field}` });
-    // }
+    for (field of requiredFields) {
+      if (!req["body"].hasOwnProperty(field))
+        return res
+          .status(400)
+          .send({ status: false, msg: `Please provide ${field}` });
+    }
     // Checking if the value is a valid string or not
     for (field of requiredFields) {
       if (!isValidString(req.body[field]))
@@ -51,14 +50,7 @@ const createCollege = async function (req, res) {
           .send({ status: false, msg: `${field} should only contain letters` });
       }
     }
-    //Checking if there is no field other than the specified
-    // for (key in req.body) {
-    //   if (!requiredFields.includes(key))
-    //     return res.status(400).send({
-    //       status: false,
-    //       msg: `Fields can only be among these: ${requiredFields.join(", ")}`,
-    //     });
-    // }
+
     // Checking if the logoLink is a valid or not
     if (!isValidUrl(req.body.logoLink.trim())) {
       return res
@@ -76,11 +68,13 @@ const createCollege = async function (req, res) {
     if (checkName)
       return res
         .status(400)
-        .send({ status: false, msg: "Name already present" });
+        .send({ status: false, msg: "Name already exists" });
 
     // Creating a new college
     const createNewCollege = await collegeModel.create(requestBody);
-    res.status(201).send({ status: true, data: createNewCollege });
+    const obj = createNewCollege.toObject();
+    ["_id", "createdAt", "updatedAt", "__v"].forEach((x) => delete obj[x]);
+    res.status(201).send({ status: true, data: obj });
   } catch (error) {
     res.status(500).send({ status: false, msg: error.message });
   }
@@ -88,7 +82,7 @@ const createCollege = async function (req, res) {
 
 async function getInterns(req, res) {
   try {
-    res.header("Access-Control-Allow-Origin","*")
+    res.header("Access-Control-Allow-Origin", "*");
     let data = req.query;
     // Checking if the data is empty or not
     if (Object.keys(data).length === 0) {
@@ -123,16 +117,26 @@ async function getInterns(req, res) {
       .select({ name: 1, fullName: 1, logoLink: 1 })
       .lean();
     if (!findDocument) {
-      return res.status(404).send({ status: false, msg: "no such clg with the give collegeName" });
+      return res
+        .status(404)
+        .send({ status: false, msg: "no such clg with the give collegeName" });
     }
     let Id = findDocument._id;
-    let getInterns = await internModel.find({
-      collegeId: Id,
-      isDeleted: false,
-    });
+    let getInterns = await internModel
+      .find({
+        collegeId: Id,
+        isDeleted: false,
+      })
+      .select({
+        collegeId: 0,
+        isDeleted: 0,
+        createdAt: 0,
+        updatedAt: 0,
+        __v: 0,
+      });
     if (getInterns.length === 0) {
       delete findDocument["_id"];
-      findDocument.interns = "interns not found";
+      findDocument.interns = [];
       return res.status(200).send({ status: true, data: findDocument });
     }
     delete findDocument["_id"];

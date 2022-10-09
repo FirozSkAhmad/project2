@@ -5,8 +5,7 @@ const isValidEmail = function (data) {
   return emailRegex.test(data);
 };
 const isMobileNumber = function (data) {
-  const mobileRegex =
-    /^([9876]{1})([0-9]{1})([0-9]{8})$/;
+  const mobileRegex = /^([9876]{1})([0-9]{1})([0-9]{8})$/;
   return mobileRegex.test(data);
 };
 const isValidString = function (data) {
@@ -16,15 +15,14 @@ const isValidString = function (data) {
   return true;
 };
 
-const checkNumbersInString= function(data){
-  const checkNumbersInStringRegex =
-    /^[a-zA-Z ]*$/;
+const checkNumbersInString = function (data) {
+  const checkNumbersInStringRegex = /^[a-zA-Z ]*$/;
   return checkNumbersInStringRegex.test(data);
-}
+};
 
 const createIntern = async function (req, res) {
   try {
-    res.header("Access-Control-Allow-Origin","*")
+    res.header("Access-Control-Allow-Origin", "*");
     let data = req.body;
     // Checking if the data is empty or not
     if (Object.keys(data).length === 0) {
@@ -34,13 +32,13 @@ const createIntern = async function (req, res) {
     }
     //Checking if the required keys are present or not
     const requiredFields = ["name", "email", "mobile", "collegeName"];
-    // for (field of requiredFields) {
-    //   if (!data.hasOwnProperty(field)) {
-    //     return res
-    //       .status(400)
-    //       .send({ status: false, msg: `please provide ${field}` });
-    //   }
-    // }
+    for (field of requiredFields) {
+      if (!data.hasOwnProperty(field)) {
+        return res
+          .status(400)
+          .send({ status: false, msg: `please provide ${field}` });
+      }
+    }
     // Checking if the value is a valid string or not
     for (field of requiredFields)
       if (!isValidString(data[field])) {
@@ -54,14 +52,6 @@ const createIntern = async function (req, res) {
         .status(400)
         .send({ status: false, msg: "name should only contain letters" });
     }
-    //Checking if there is no field other than the specified
-    // for (key in data) {
-    //   if (!requiredFields.includes(key))
-    //     return res.status(400).send({
-    //       status: false,
-    //       msg: `keys must be among this ${requiredFields.join(",")}`,
-    //     });
-    // }
     // Checking if the Email is a valid or not
     if (!isValidEmail(data.email.trim())) {
       return res.status(400).send({ status: false, msg: "email is invalid" });
@@ -86,15 +76,19 @@ const createIntern = async function (req, res) {
     }
 
     let collegeData = await collegeModel.findOne({
-      name: data.collegeName.trim()
+      name: data.collegeName.trim(),
     });
     if (!collegeData) {
-      return res.status(404).send({ status: false, msg: "no such clg with the give collegeName" });
+      return res
+        .status(404)
+        .send({ status: false, msg: "no such clg with the give collegeName" });
     }
     data.collegeId = collegeData._id;
     delete data["collegeName"];
     let createInterns = await internModel.create(data);
-    return res.status(201).send({ status: true, data: createInterns });
+    const obj = createInterns.toObject();
+    ["_id", "createdAt", "updatedAt", "__v"].forEach((x) => delete obj[x]);
+    return res.status(201).send({ status: true, data: obj });
   } catch (error) {
     return res.status(500).send({ status: false, msg: error.message });
   }
